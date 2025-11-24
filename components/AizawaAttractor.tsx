@@ -52,6 +52,7 @@ const AizawaAttractor: React.FC<Props> = ({ params, settings }) => {
     // We can't type check array access inside tight loops easily without performance hit,
     // so we trust the indices.
     const count = settings.particleCount;
+    const colorObj = new THREE.Color();
 
     for (let i = 0; i < count; i++) {
       let x = positions[i * 3];
@@ -82,10 +83,15 @@ const AizawaAttractor: React.FC<Props> = ({ params, settings }) => {
       // k4
       const k4 = computeDerivatives(x + k3.dx * dt, y + k3.dy * dt, z + k3.dz * dt);
 
+      // Average derivatives for final step
+      const vx = (k1.dx + 2 * k2.dx + 2 * k3.dx + k4.dx) / 6;
+      const vy = (k1.dy + 2 * k2.dy + 2 * k3.dy + k4.dy) / 6;
+      const vz = (k1.dz + 2 * k2.dz + 2 * k3.dz + k4.dz) / 6;
+
       // Final update
-      x += (k1.dx + 2 * k2.dx + 2 * k3.dx + k4.dx) * (dt / 6);
-      y += (k1.dy + 2 * k2.dy + 2 * k3.dy + k4.dy) * (dt / 6);
-      z += (k1.dz + 2 * k2.dz + 2 * k3.dz + k4.dz) * (dt / 6);
+      x += vx * dt;
+      y += vy * dt;
+      z += vz * dt;
 
       // Reset if out of bounds or NaN (stability check)
       if (isNaN(x) || isNaN(y) || isNaN(z) || Math.abs(x) > 50 || Math.abs(y) > 50 || Math.abs(z) > 50) {
@@ -98,11 +104,18 @@ const AizawaAttractor: React.FC<Props> = ({ params, settings }) => {
       positions[i * 3 + 1] = y;
       positions[i * 3 + 2] = z;
 
-      // Color mapping based on velocity/position
-      // Map Z height to Hue
-      // Normalize Z somewhat effectively: usually between -2 and 2 roughly for standard params
-      const normalizedZ = (z + 2) / 4; 
-      const colorObj = new THREE.Color().setHSL(Math.abs(normalizedZ % 1), 0.8, 0.6);
+      // Color mapping based on velocity magnitude
+      const velocity = Math.sqrt(vx * vx + vy * vy + vz * vz);
+      
+      // Normalize velocity: 0 to ~3.5 is the typical range for interesting dynamics
+      // Clamp at 1.0 for color mapping
+      const t = Math.min(velocity / 3.5, 1.0);
+
+      // Gradient: 
+      // Slow (Blue-ish/Cyan) -> Fast (Red/Orange/White)
+      // Hue: 0.6 (Blue) -> 0.0 (Red)
+      // Lightness: 0.5 -> 0.8 (Brighter when faster)
+      colorObj.setHSL(0.6 * (1.0 - t), 1.0, 0.5 + 0.3 * t);
       
       colors[i * 3] = colorObj.r;
       colors[i * 3 + 1] = colorObj.g;
