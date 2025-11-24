@@ -1,0 +1,5 @@
+{
+  "name": "Aizawa Attractor Visualizer",
+  "description": "An interactive 3D visualization of the Aizawa chaotic attractor using React Three Fiber. Explore the beautiful geometry of chaos theory with real-time parameter controls and AI-powered explanations.",
+  "requestFramePermissions": []
+}
